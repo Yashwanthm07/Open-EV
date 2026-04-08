@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Email Triage Control Room</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet" />
+    <style>
+         :root {
+            --bg: #f4efe4;
+            --bg-accent: #ffe9c7;
+            --panel: #fff9ef;
+            --ink: #1f2a2e;
+            --muted: #51606a;
+            --line: #e8dcc9;
+            --brand: #ff7a2f;
+            --brand-2: #00a88f;
+            --brand-3: #f2c438;
+            --danger: #c5323a;
+            --ok: #1c9a55;
+            --shadow: 0 20px 35px rgba(22, 22, 22, 0.12);
+            --radius-lg: 22px;
+            --radius-md: 14px;
+            --radius-sm: 10px;
+        }
+        
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            margin: 0;
+            font-family: "Sora", sans-serif;
+            color: var(--ink);
+            background: radial-gradient(circle at 5% 0%, #ffe4a5 0%, transparent 34%), radial-gradient(circle at 90% 10%, #b9f0e4 0%, transparent 30%), radial-gradient(circle at 35% 95%, #ffd2c0 0%, transparent 38%), linear-gradient(135deg, var(--bg) 0%, #fff7e7 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .grain::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            opacity: 0.08;
+            background-image: radial-gradient(#111 0.4px, transparent 0.4px);
+            background-size: 3px 3px;
+            z-index: 0;
+        }
+        
+        .app {
+            position: relative;
+            z-index: 1;
+            width: min(1200px, 94vw);
+            margin: 24px auto 56px;
+            animation: rise 0.7s ease;
+        }
+        
+        @keyframes rise {
+            from {
+                opacity: 0;
+                transform: translateY(16px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .topbar {
+            display: grid;
+            grid-template-columns: 1.4fr 1fr;
+            gap: 18px;
+            margin-bottom: 18px;
+        }
+        
+        .card {
+            background: linear-gradient(180deg, #fffdf7 0%, var(--panel) 100%);
+            border: 1px solid var(--line);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow);
+            padding: 18px;
+        }
+        
+        .hero h1 {
+            margin: 0;
+            font-size: clamp(1.35rem, 2.8vw, 2rem);
+            letter-spacing: -0.03em;
+        }
+        
+        .hero p {
+            margin: 8px 0 0;
+            color: var(--muted);
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        
+        .status {
+            display: grid;
+            gap: 10px;
+        }
+        
+        .chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        
+        .chip {
+            border: 1px solid #ead9bd;
+            background: #fff;
+            border-radius: 999px;
+            padding: 6px 10px;
+            font-size: 0.78rem;
+            color: #38434a;
+        }
+        
+        .layout {
+            display: grid;
+            grid-template-columns: 1.4fr 1fr;
+            gap: 18px;
+            align-items: start;
+        }
+        
+        .email-card {
+            min-height: 500px;
+        }
+        
+        .email-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            gap: 10px;
+            border-bottom: 1px dashed var(--line);
+            padding-bottom: 12px;
+            margin-bottom: 12px;
+        }
+        
+        .email-subject {
+            margin: 0;
+            font-size: 1.1rem;
+            letter-spacing: -0.02em;
+        }
+        
+        .meta {
+            color: var(--muted);
+            margin-top: 8px;
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+        
+        .email-body {
+            white-space: pre-wrap;
+            line-height: 1.6;
+            color: #2e343a;
+            font-size: 0.93rem;
+            max-height: 320px;
+            overflow: auto;
+            padding-right: 4px;
+            font-family: "IBM Plex Mono", monospace;
+            border-left: 3px solid #f2e6cf;
+            padding-left: 10px;
+        }
+        
+        .panel-title {
+            margin: 0 0 10px;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #4b5963;
+        }
+        
+        .controls {
+            display: grid;
+            gap: 10px;
+        }
+        
+        .field {
+            display: grid;
+            gap: 5px;
+        }
+        
+        label {
+            font-size: 0.8rem;
+            color: #4b5963;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+        }
+        
+        input,
+        select,
+        textarea {
+            width: 100%;
+            border: 1px solid #e8dcc9;
+            border-radius: var(--radius-sm);
+            background: #fff;
+            padding: 10px 12px;
+            font: inherit;
+            color: var(--ink);
+        }
+        
+        textarea {
+            min-height: 88px;
+            resize: vertical;
+        }
+        
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: 2px solid #ffddb3;
+            border-color: #f3bd73;
+        }
+        
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        
+        .button-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        button {
+            border: 0;
+            cursor: pointer;
+            border-radius: 999px;
+            padding: 9px 14px;
+            font-family: "Sora", sans-serif;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+            transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.2s ease;
+        }
+        
+        button:hover {
+            transform: translateY(-1px);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .btn-primary {
+            color: #fff;
+            background: linear-gradient(135deg, var(--brand) 0%, #ff9155 100%);
+            box-shadow: 0 8px 18px rgba(255, 122, 47, 0.34);
+        }
+        
+        .btn-secondary {
+            color: #0c4d41;
+            background: linear-gradient(135deg, #d6f9f2 0%, #b9f0e4 100%);
+            box-shadow: 0 8px 18px rgba(0, 168, 143, 0.18);
+        }
+        
+        .btn-ghost {
+            background: #fff;
+            border: 1px solid #e8dcc9;
+            color: #44535d;
+        }
+        
+        .log {
+            margin-top: 12px;
+            background: #fff;
+            border: 1px solid #e8dcc9;
+            border-radius: var(--radius-sm);
+            padding: 9px;
+            min-height: 54px;
+            color: #2f3a42;
+            font-size: 0.85rem;
+            line-height: 1.45;
+        }
+        
+        .score-wrap {
+            margin-top: 12px;
+            display: grid;
+            gap: 8px;
+        }
+        
+        .meter {
+            height: 12px;
+            border-radius: 999px;
+            background: #f3e7d3;
+            overflow: hidden;
+            border: 1px solid #e6d8c0;
+        }
+        
+        .meter>div {
+            height: 100%;
+            width: 0%;
+            transition: width 0.35s ease;
+            background: linear-gradient(90deg, var(--brand-2), var(--brand), var(--brand-3));
+        }
+        
+        .history {
+            margin-top: 10px;
+            display: grid;
+            gap: 8px;
+            max-height: 248px;
+            overflow: auto;
+            padding-right: 4px;
+        }
+        
+        .event {
+            border: 1px solid #ebddc7;
+            border-radius: var(--radius-sm);
+            padding: 8px;
+            background: #fffdf9;
+            animation: appear 0.24s ease;
+        }
+        
+        @keyframes appear {
+            from {
+                opacity: 0;
+                transform: translateY(6px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .tiny {
+            font-size: 0.77rem;
+            color: #596771;
+        }
+        
+        .kpi {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 10px;
+        }
+        
+        .kpi .item {
+            border: 1px solid #ead9bd;
+            border-radius: var(--radius-sm);
+            background: #fff;
+            padding: 8px;
+        }
+        
+        .kpi b {
+            display: block;
+            font-size: 1rem;
+            color: #1f2a2e;
+        }
+        
+        .kpi span {
+            font-size: 0.73rem;
+            color: #5f6c76;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+        
+        .tag {
+            border-radius: 999px;
+            font-size: 0.72rem;
+            padding: 5px 10px;
+            font-weight: 700;
+            white-space: nowrap;
+            border: 1px solid transparent;
+        }
+        
+        .tag.ok {
+            background: #d8f5e6;
+            color: #1a6c3d;
+            border-color: #bce9d2;
+        }
+        
+        .tag.warn {
+            background: #fff3d9;
+            color: #8a5f0a;
+            border-color: #f3dfb2;
+        }
+        
+        .tag.bad {
+            background: #ffe1e4;
+            color: #8c2430;
+            border-color: #f5bcc3;
+        }
+        
+        .footer-note {
+            margin-top: 12px;
+            font-size: 0.74rem;
+            color: #63717a;
+            text-align: center;
+        }
+        
+        @media (max-width: 980px) {
+            .topbar,
+            .layout {
+                grid-template-columns: 1fr;
+            }
+            .email-card {
+                min-height: auto;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="grain"></div>
+    <main class="app">
+        <section class="topbar">
+            <article class="card hero">
+                <h1>Email Triage Control Room</h1>
+                <p>Run your environment like an ops dashboard: reset tasks, triage each email, track reward shaping, and monitor decision quality in real time.</p>
+                <div class="chip-row">
+                    <div class="chip">OpenEnv Compatible</div>
+                    <div class="chip">Dense Reward Feedback</div>
+                    <div class="chip">Easy / Medium / Hard Tasks</div>
+                </div>
+            </article>
+            <article class="card status">
+                <h3 class="panel-title">Session</h3>
+                <div class="row">
+                    <div class="field">
+                        <label for="task">Task</label>
+                        <select id="task">
+              <option value="email_triage_easy">email_triage_easy</option>
+              <option value="email_triage_medium">email_triage_medium</option>
+              <option value="email_triage_hard">email_triage_hard</option>
+            </select>
+                    </div>
+                    <div class="field">
+                        <label for="session">Session ID</label>
+                        <input id="session" value="web-session" />
+                    </div>
+                </div>
+                <div class="button-row">
+                    <button class="btn-secondary" id="resetBtn">Reset Task</button>
+                    <button class="btn-ghost" id="stateBtn">View State</button>
+                    <button class="btn-ghost" id="summaryBtn">Summary</button>
+                </div>
+                <div class="kpi">
+                    <div class="item"><span>Inbox Left</span><b id="inboxCount">0</b></div>
+                    <div class="item"><span>Processed</span><b id="processedCount">0</b></div>
+                    <div class="item"><span>Score</span><b id="scoreValue">0.00</b></div>
+                </div>
+            </article>
+        </section>
+
+        <section class="layout">
+            <article class="card email-card">
+                <div class="email-header">
+                    <div>
+                        <h2 class="email-subject" id="subject">No email loaded</h2>
+                        <div class="meta" id="sender">Press "Reset Task" to start.</div>
+                    </div>
+                    <div id="statusTag" class="tag warn">idle</div>
+                </div>
+                <div class="email-body" id="body">Waiting for a task reset...</div>
+            </article>
+
+            <article class="card controls">
+                <h3 class="panel-title">Action Panel</h3>
+
+                <div class="field">
+                    <label for="actionType">Action Type</label>
+                    <select id="actionType">
+            <option value="label">label</option>
+            <option value="reply">reply</option>
+            <option value="forward">forward</option>
+            <option value="archive">archive</option>
+            <option value="delete">delete</option>
+            <option value="snooze">snooze</option>
+            <option value="flag">flag</option>
+          </select>
+                </div>
+
+                <div class="field">
+                    <label for="label">Label</label>
+                    <select id="label">
+            <option value="">(none)</option>
+            <option value="urgent">urgent</option>
+            <option value="normal">normal</option>
+            <option value="spam">spam</option>
+            <option value="needs_reply">needs_reply</option>
+            <option value="archive">archive</option>
+          </select>
+                </div>
+
+                <div class="field">
+                    <label for="forwardTo">Forward To</label>
+                    <input id="forwardTo" placeholder="legal@company.com" />
+                </div>
+
+                <div class="field">
+                    <label for="replyText">Reply Text</label>
+                    <textarea id="replyText" placeholder="Write a clear professional response..."></textarea>
+                </div>
+
+                <div class="field">
+                    <label for="reasoning">Reasoning</label>
+                    <textarea id="reasoning" placeholder="Why this is the right action..."></textarea>
+                </div>
+
+                <div class="button-row">
+                    <button class="btn-primary" id="submitBtn">Submit Step</button>
+                    <button class="btn-ghost" id="clearBtn">Clear Fields</button>
+                </div>
+
+                <div class="score-wrap">
+                    <div class="tiny">Running score trajectory</div>
+                    <div class="meter">
+                        <div id="scoreMeter"></div>
+                    </div>
+                </div>
+
+                <div class="log" id="log">Ready.</div>
+
+                <div>
+                    <h4 class="panel-title">Recent Events</h4>
+                    <div class="history" id="history"></div>
+                </div>
+            </article>
+        </section>
+
+        <div class="footer-note">Tip: start with easy, then medium, then hard. The reward model gives dense feedback through each step.</div>
+    </main>
+
+    <script>
+        const els = {
+            task: document.getElementById("task"),
+            session: document.getElementById("session"),
+            resetBtn: document.getElementById("resetBtn"),
+            stateBtn: document.getElementById("stateBtn"),
+            summaryBtn: document.getElementById("summaryBtn"),
+            submitBtn: document.getElementById("submitBtn"),
+            clearBtn: document.getElementById("clearBtn"),
+            actionType: document.getElementById("actionType"),
+            label: document.getElementById("label"),
+            forwardTo: document.getElementById("forwardTo"),
+            replyText: document.getElementById("replyText"),
+            reasoning: document.getElementById("reasoning"),
+            subject: document.getElementById("subject"),
+            sender: document.getElementById("sender"),
+            body: document.getElementById("body"),
+            log: document.getElementById("log"),
+            history: document.getElementById("history"),
+            inboxCount: document.getElementById("inboxCount"),
+            processedCount: document.getElementById("processedCount"),
+            scoreValue: document.getElementById("scoreValue"),
+            scoreMeter: document.getElementById("scoreMeter"),
+            statusTag: document.getElementById("statusTag"),
+        };
+
+        function setStatus(type, text) {
+            els.statusTag.className = `tag ${type}`;
+            els.statusTag.textContent = text;
+        }
+
+        function log(text) {
+            els.log.textContent = text;
+        }
+
+        function addEvent(title, details) {
+            const node = document.createElement("div");
+            node.className = "event";
+            node.innerHTML = `<div><strong>${title}</strong></div><div class="tiny">${details}</div>`;
+            els.history.prepend(node);
+            while (els.history.children.length > 20) {
+                els.history.removeChild(els.history.lastChild);
+            }
+        }
+
+        function updateObservation(obs, done) {
+            const email = obs ? .email;
+
+            if (email) {
+                els.subject.textContent = email.subject || "(no subject)";
+                els.sender.textContent = `${email.sender || "Unknown"} <${email.sender_email || "unknown"}> | ${email.timestamp || "n/a"}`;
+                els.body.textContent = email.body || "(empty body)";
+            } else {
+                els.subject.textContent = "Inbox Complete";
+                els.sender.textContent = "No remaining emails";
+                els.body.textContent = "Great job. You have processed all available emails in this task.";
+            }
+
+            const score = Number(obs ? .score_so_far || 0);
+            els.inboxCount.textContent = String(obs ? .inbox_size ? ? 0);
+            els.processedCount.textContent = String(obs ? .processed_count ? ? 0);
+            els.scoreValue.textContent = score.toFixed(2);
+            els.scoreMeter.style.width = `${Math.max(0, Math.min(100, score * 100))}%`;
+
+            if (done) {
+                setStatus("ok", "done");
+            } else if (email) {
+                setStatus("warn", "active");
+            } else {
+                setStatus("ok", "ready");
+            }
+        }
+
+        async function api(path, method = "GET", payload = null) {
+            const opts = {
+                method,
+                headers: {
+                    "Content-Type": "application/json"
+                }
+            };
+            if (payload) {
+                opts.body = JSON.stringify(payload);
+            }
+            const res = await fetch(path, opts);
+            if (!res.ok) {
+                const text = await res.text();
+                throw new Error(text || `HTTP ${res.status}`);
+            }
+            return await res.json();
+        }
+
+        async function resetTask() {
+            const payload = {
+                task_name: els.task.value,
+                session_id: els.session.value || "web-session",
+            };
+
+            setStatus("warn", "resetting");
+            const result = await api("/reset", "POST", payload);
+            updateObservation(result.observation, result.done);
+            log(result.observation ? .last_action_result || "Task reset.");
+            addEvent("Reset", `${payload.task_name} / session=${payload.session_id}`);
+            setStatus("ok", "ready");
+        }
+
+        function buildActionPayload() {
+            return {
+                session_id: els.session.value || "web-session",
+                action_type: els.actionType.value,
+                label: els.label.value || null,
+                forward_to: els.forwardTo.value || null,
+                reply_text: els.replyText.value || null,
+                reasoning: els.reasoning.value || null,
+            };
+        }
+
+        async function submitStep() {
+            const payload = buildActionPayload();
+            setStatus("warn", "running");
+            const result = await api("/step", "POST", payload);
+
+            updateObservation(result.observation, result.done);
+            const reward = Number(result.reward || 0).toFixed(2);
+            const feedback = result.info ? .feedback || result.observation ? .last_action_result || "Step complete.";
+            log(`Reward ${reward}: ${feedback}`);
+            addEvent(`${payload.action_type} -> reward ${reward}`, feedback);
+            setStatus(result.done ? "ok" : "warn", result.done ? "done" : "active");
+        }
+
+        async function fetchState() {
+            const sid = encodeURIComponent(els.session.value || "web-session");
+            const state = await api(`/state?session_id=${sid}`);
+            log(`State loaded. step_count=${state.step_count}, current_email_idx=${state.current_email_idx}`);
+            addEvent("State", `step_count=${state.step_count}, score=${Number(state.total_score || 0).toFixed(2)}`);
+        }
+
+        async function fetchSummary() {
+            const sid = encodeURIComponent(els.session.value || "web-session");
+            const summary = await api(`/summary?session_id=${sid}`);
+            log(`Final score ${Number(summary.final_score || 0).toFixed(3)} after ${summary.steps_taken} steps.`);
+            addEvent("Summary", `task=${summary.task}, final_score=${Number(summary.final_score || 0).toFixed(3)}`);
+        }
+
+        function clearFields() {
+            els.label.value = "";
+            els.forwardTo.value = "";
+            els.replyText.value = "";
+            els.reasoning.value = "";
+            log("Action fields cleared.");
+        }
+
+        async function safeRun(fn) {
+            try {
+                await fn();
+            } catch (err) {
+                setStatus("bad", "error");
+                const message = err ? .message || String(err);
+                log(`Error: ${message}`);
+                addEvent("Error", message);
+            }
+        }
+
+        els.resetBtn.addEventListener("click", () => safeRun(resetTask));
+        els.submitBtn.addEventListener("click", () => safeRun(submitStep));
+        els.stateBtn.addEventListener("click", () => safeRun(fetchState));
+        els.summaryBtn.addEventListener("click", () => safeRun(fetchSummary));
+        els.clearBtn.addEventListener("click", clearFields);
+
+        // Attempt auto-reset for quicker first use.
+        safeRun(resetTask);
+    </script>
+</body>
+
+</html>

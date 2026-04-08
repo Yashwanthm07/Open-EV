@@ -1,0 +1,152 @@
+# OpenEnv Environment Manifest
+# Validated by: openenv validate
+
+name: email-triage-openenv
+version: "1.0.0"
+description: >
+  Real-world corporate email triage environment for AI agent training and evaluation.
+  Simulates an inbox management task where agents must classify, reply to, forward,
+  or archive emails across three difficulty levels. Models the genuine daily work of
+  knowledge workers — email triage is estimated to consume 2.5+ hours per day.
+
+author: "OpenEnv Submission"
+license: MIT
+tags:
+  - openenv
+  - email
+  - triage
+  - nlp
+  - real-world
+  - classification
+  - productivity
+
+# Environment interface
+interface:
+  reset_endpoint: /reset
+  step_endpoint: /step
+  state_endpoint: /state
+  health_endpoint: /health
+  websocket_endpoint: /ws
+  docs_endpoint: /docs
+  web_endpoint: /web
+
+# Tasks
+tasks:
+  - name: email_triage_easy
+    description: "Triage 5 emails with clear spam/urgent/normal signals"
+    difficulty: easy
+    email_count: 5
+    max_steps: 10
+    expected_score_random: 0.15
+    expected_score_gpt4: 0.90
+
+  - name: email_triage_medium
+    description: "Process 8 mixed-priority emails including customer complaints, invoices, and HR requests"
+    difficulty: medium
+    email_count: 8
+    max_steps: 20
+    expected_score_random: 0.12
+    expected_score_gpt4: 0.75
+
+  - name: email_triage_hard
+    description: "Handle 10 complex high-stakes emails: security incidents, resignations, whistleblower, churn risk"
+    difficulty: hard
+    email_count: 10
+    max_steps: 30
+    expected_score_random: 0.10
+    expected_score_gpt4: 0.60
+
+# Action space
+action_space:
+  type: discrete_structured
+  fields:
+    - name: action_type
+      type: string
+      enum: [label, reply, forward, archive, delete, snooze, flag]
+      required: true
+    - name: label
+      type: string
+      enum: [urgent, normal, spam, needs_reply, archive]
+      required: false
+      condition: "action_type == label"
+    - name: reply_text
+      type: string
+      required: false
+      condition: "action_type == reply"
+    - name: forward_to
+      type: string
+      required: false
+      condition: "action_type == forward"
+    - name: reasoning
+      type: string
+      required: false
+      description: "Agent's explanation for the action"
+
+# Observation space
+observation_space:
+  type: structured
+  fields:
+    - name: email
+      type: EmailData | null
+      description: "Current email to process (null when inbox empty)"
+    - name: inbox_size
+      type: integer
+      description: "Number of emails remaining"
+    - name: processed_count
+      type: integer
+      description: "Number of emails processed so far"
+    - name: last_action_result
+      type: string
+      description: "Feedback on the last action taken"
+    - name: score_so_far
+      type: float
+      range: [0.0, 1.0]
+      description: "Running accuracy score"
+    - name: triaged_emails
+      type: list[dict]
+      description: "History of processed email IDs and actions"
+    - name: done
+      type: boolean
+    - name: reward
+      type: float | null
+
+# Reward structure
+reward:
+  type: dense
+  range: [-0.1, 1.2]
+  shaping:
+    - event: correct_label
+      reward: 1.0
+    - event: correct_reply_with_key_content
+      reward: 1.0
+    - event: partial_reply
+      reward: 0.4
+    - event: correct_forward
+      reward: 1.0
+    - event: delete_spam
+      reward: 0.8
+    - event: invalid_action_type
+      reward: -0.1
+    - event: noop
+      reward: -0.05
+    - event: excellent_episode_bonus
+      reward: 0.2
+      condition: "final_score >= 0.8"
+
+# Deployment
+deployment:
+  platform: huggingface_spaces
+  framework: docker
+  port: 7860
+  runtime: cpu
+  vcpu: 2
+  memory_gb: 8
+
+# Baseline
+baseline:
+  script: inference.py
+  model: Qwen/Qwen2.5-72B-Instruct
+  scores:
+    email_triage_easy: 0.85
+    email_triage_medium: 0.68
+    email_triage_hard: 0.52
