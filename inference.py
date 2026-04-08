@@ -9,6 +9,7 @@ Environment variables
 API_BASE_URL   LLM endpoint (default: https://router.huggingface.co/v1)
 MODEL_NAME     Model identifier (default: Qwen/Qwen2.5-72B-Instruct)
 HF_TOKEN       HuggingFace / API key
+LOCAL_IMAGE_NAME   Optional local image name (for docker-image workflows)
 TASK_NAME      Run a single task (default: run all 3)
 
 Usage
@@ -33,9 +34,10 @@ from openai import OpenAI
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 
-API_KEY = os.getenv("HF_TOKEN") or os.getenv("API_KEY") or "dummy_key"
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
+HF_TOKEN = os.getenv("HF_TOKEN")
+LOCAL_IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME")
 BENCHMARK = "email_triage"
 MAX_STEPS = 15
 TEMPERATURE = 0.2
@@ -182,7 +184,7 @@ def get_model_action(
         )
         raw = (completion.choices[0].message.content or "").strip()
     except Exception as exc:
-        print(f"[DEBUG] Model call failed: {exc}", flush=True)
+        print(f"Model call failed: {exc}", file=sys.stderr, flush=True)
         raw = '{"action_type": "archive", "reasoning": "fallback"}'
 
     # Parse JSON — strip markdown fences if present
@@ -190,7 +192,7 @@ def get_model_action(
     try:
         action = json.loads(clean)
     except json.JSONDecodeError:
-        print(f"[DEBUG] JSON parse failed on: {raw[:200]}", flush=True)
+        print(f"JSON parse failed on: {raw[:200]}", file=sys.stderr, flush=True)
         action = {"action_type": "archive", "reasoning": "parse_error"}
 
     return action, raw
@@ -262,7 +264,7 @@ def run_episode(
         except Exception as exc:
             reward = 0.0
             error_msg = str(exc)[:80]
-            print(f"[DEBUG] Step {step} HTTP error: {exc}", flush=True)
+            print(f"Step {step} HTTP error: {exc}", file=sys.stderr, flush=True)
 
         rewards.append(reward)
         steps_taken = step
@@ -306,7 +308,10 @@ def run_episode(
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main() -> None:
-    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+    if not HF_TOKEN:
+        raise RuntimeError("HF_TOKEN is required and must be set in the environment")
+
+    client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN)
 
     # Server base URL — local if running alongside the server, else from env
     server_url = os.getenv("ENV_BASE_URL", "http://localhost:7860")
@@ -324,7 +329,7 @@ def main() -> None:
                 client, task_name, server_url
             )
         except Exception as exc:
-            print(f"[DEBUG] Episode failed for {task_name}: {exc}", flush=True)
+            print(f"Episode failed for {task_name}: {exc}", file=sys.stderr, flush=True)
             log_end(success=False, steps=0, score=0.0, rewards=[])
         else:
             log_end(
@@ -335,14 +340,6 @@ def main() -> None:
             )
 
         all_successes.append(success)
-
-    # Summary across all tasks
-    overall = sum(all_successes) / len(all_successes) if all_successes else 0.0
-    print(
-        f"[SUMMARY] tasks={len(TASKS_TO_RUN)} success_rate={overall:.2f} "
-        f"passed={sum(all_successes)}/{len(all_successes)}",
-        flush=True,
-    )
 
 
 if __name__ == "__main__":
